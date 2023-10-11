@@ -12,8 +12,8 @@ group = ['GC', 'Swap']
 groupn = ["Natural G/C", "-1/+1-swap"]
 
 N = 1204
-# M = 10620
-M = 5000  # reduce columns to lessen strain when testing
+M = 10620
+# M = 5000  # reduce columns to lessen strain when testing
 data = np.zeros((N, M, 2))
 
 for k in range(2):
@@ -33,22 +33,23 @@ idxorig = np.where(np.sum(data < cutoff, axis=(0, 2)))
 datamerge = np.concatenate([data[:, :, 0], data[:, :, 1]])
 
 dataNorm = normalize(1.0 / datamerge)
-R = np.corrcoef(dataNorm)
-relatmat = np.triu(R, 1)
+R = np.corrcoef(dataNorm.T)
+relatmat = np.triu(R, k=1)
 
 # %%
 # Logistic regression
 iptglob = []
 
+trainRepeat = 2
+
 # Train the model 10 times with randomly chosen features for statistics
-for t in range(10):
+for t in range(trainRepeat):
     idxrelat = set()
     i = 1
     while i < relatmat.shape[0]:
         if i in idxrelat:
             i += 1
             continue
-        # tmp = [i] + list(np.where(np.abs(relatmat[i, :]) > 0.9))
         tmp = [i] + list(np.where(np.abs(relatmat[i, :]) > 0.9)[0])
         idxrelat.update(np.random.choice(
             np.array(tmp).flatten(), size=len(tmp) - 1, replace=False))
@@ -68,14 +69,18 @@ for t in range(10):
 
     idxTrain, idxTest = cvp
 
-    X = X.T
+    # X = X.T
     lambda_vals = np.logspace(-6, -0.5, len(idx))
 
     Mdl = LogisticRegression(penalty='l1', solver='saga',
                              C=1.0 / lambda_vals[0], max_iter=1000, tol=1e-8)
-    Mdl.fit(X[:, idxTrain], Y[idxTrain])
-    labels = Mdl.predict(X[:, idxTest])
-    L = Mdl.score(X[:, idxTest], Y[idxTest])
+
+    Mdl.fit(X[idxTrain, :], Y[idxTrain])
+    labels = Mdl.predict(X[idxTest, :])
+    L = Mdl.score(X[idxTest, :], Y[idxTest])
+    # Mdl.fit(X[:, idxTrain], Y[idxTrain])
+    # labels = Mdl.predict(X[:, idxTest])
+    # L = Mdl.score(X[:, idxTest], Y[idxTest])
 
     # importance = np.zeros(data.shape[1])
     # importance[idx] = np.abs(Mdl.coef_[0])
@@ -86,16 +91,15 @@ for t in range(10):
     # iptorig = np.sum(importance, axis=0)
     # ipt = normalize(iptorig)
 
-# %%
-    importance = np.zeros(data.shape[1])
-    importance[idx] = np.abs(Mdl.coef_[:, 0])
-    importance = np.reshape(importance, (590, int(data.shape[1] / 590)))
-    importance = normalize(importance, axis=0).T
-    iptorig = np.nansum(importance, axis=1)
-    ipt = normalize(iptorig[:, np.newaxis], axis=0, norm='max')
+    # this one
+    # importance = np.zeros(data.shape[1])
+    # importance[idx] = np.abs(Mdl.coef_[:,1])
+    # importance = np.reshape(590, (-1, 1))
+    # importance = normalize(importance, norm='l2', axis=0)
+    # iptorig = np.nansum(importance, axis=1)
+    # ipt = normalize(iptorig.reshape(-1, 1), axis=0, norm='max')
 
-    iptglob = np.zeros((10, ipt.shape[0]))
-    iptglob[t, :] = ipt.flatten()
+    # iptglob[t, :] = ipt
 
 
 ipt = np.mean(iptglob, axis=0)
