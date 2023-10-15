@@ -1,3 +1,4 @@
+# %%
 from __future__ import absolute_import, division, print_function
 
 import logging
@@ -7,12 +8,13 @@ from demystifying.data_generation import DataGenerator
 
 logger = logging.getLogger("demo")
 logger.setLevel('INFO')
-
 # Create data for which we know the ground truth
 dg = DataGenerator(natoms=20, nclusters=2, natoms_per_cluster=2, nframes_per_cluster=500)
 samples, labels = dg.generate_data()
 feature_to_resids = dg.feature_to_resids
 logger.info("Generated samples and labels of shapes %s and %s", samples.shape, labels.shape)
+
+# %%
 
 # Identify important residues using a random forest
 extractor = fe.RandomForestFeatureExtractor(samples=samples, labels=labels)

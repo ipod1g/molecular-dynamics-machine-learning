@@ -55,3 +55,9 @@ datamerge = np.concatenate((data[:, :, 0], data[:, :, 1]), axis=0)
 
 
 logger.info("Done")
+
+
+
+# TODO: merge 2 data sets into column on top of each other
+# use labels with 1 and 0 to show which data set it belongs to
+# get feature to resids from ( data[0][1] => protein-1_to_dna-2 ) relationship

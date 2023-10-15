@@ -12,8 +12,8 @@ group = ['GC', 'Swap']
 groupn = ["Natural G/C", "-1/+1-swap"]
 
 N = 1204
-M = 10620
-# M = 5000  # reduce columns to lessen strain when testing
+# M = 10620
+M = 2000  # reduce columns to lessen strain when testing
 data = np.zeros((N, M, 2))
 
 for k in range(2):
