@@ -1,8 +1,6 @@
 # %%
 from __future__ import absolute_import, division, print_function
-
 import logging
-
 import numpy as np
 
 from demystifying import feature_extraction as fe, visualization
@@ -88,5 +86,9 @@ logger.info("Done")
 # TODO: merge 2 data sets into column on top of each other
 # use labels with 1 and 0 to show which data set it belongs to
 # get feature to resids from ( data[0][1] => protein-1_to_dna-2 ) relationship
+
+# %%
+# visualization.visualize([[postprocessor]], highlighted_residues=feat_store[0])
+visualization.visualize([[postprocessor]])
 
 # %%
