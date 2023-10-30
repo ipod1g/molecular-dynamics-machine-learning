@@ -118,3 +118,11 @@ bio_input/*
 # data
 python/mindisres-GC.xvg
 python/mindisres-Swap.xvg
+
+# generated files
+python/PCA
+python/RF
+
+# cache
+python/demystifying/feature_extraction/__pycache__
+python/demystifying/__pycache__
