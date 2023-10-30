@@ -42,7 +42,7 @@ idxorig = np.where(np.sum(data < cutoff, axis=(0, 2)))
 # %%
 # Shuffling
 # can loop for training set counts
-training_iteration = 2
+training_iteration = 1
 iptglobal = []
 
 for t in range(training_iteration):
@@ -101,6 +101,7 @@ plt.xlabel('Residue index')
 plt.ylabel('Importance')
 plt.xlim([35, 329])
 plt.ylim([0, 1.1])
+plt.savefig('0-295.png')
 plt.show()
 # %%
 plt.figure(figsize=(8, 3))
@@ -109,6 +110,7 @@ plt.xlabel('Residue index')
 plt.ylabel('Importance')
 plt.xlim([35, 329])
 plt.ylim([0, 1.1])
+plt.savefig('295-590.png')
 plt.show()
 
 # %%
