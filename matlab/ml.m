@@ -97,7 +97,7 @@ for t = 1:10
         i = i+1;
     end
 
-    idx = setdiff(idx,idxrelat); 
+    idx = setdiff(idxorig,idxrelat); 
     n = size(data,1); datamerge = [data(:,idx,1);data(:,idx,2)];
     
     X = normalize(1./datamerge);
