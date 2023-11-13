@@ -1,5 +1,5 @@
-%%%%
 %% Read data file
+%%%%
 clc; clear all; close all;
 
 group = {'GC';'Swap'};
@@ -13,42 +13,42 @@ data = data * 10; % nm to angstrom for gromacs
 
 %% Param Tweaking
 %%
-% remove residue candidates with heavy-atom min distance > 5Å
-distance_cutoff = 8; 
+% remove residue candidates with heavy-atom min distance > :: default: 5Å
+distance_cutoff = 5; 
 
-% number of iterations on training & shuffling
-n_iteration = 2
+% number of iterations on training & shuffling :: default: 20
+n_iteration = 20
 
-% correlation filtering during shuffle
+% correlation filtering during shuffle :: default: 0.9
 correlation_cutoff = 0.9
 
-% cvpartition test:train ratio
+% cvpartition test:train ratio :: default: 0.4
 partition_ratio = 0.4
 
 model = 'lr'
 % model = 'rf'
 
-%% Model specific params
+%% model specific params
 % linear regression
-regularization = 'lasso' % check docs for available options
-solver = 'sparsa' % check docs for available options
-tolerance = 1e-8
-lambda_a = -6
-lambda_b = -0.5
+regularization = 'lasso'    % :: default: lasso, check docs for available options
+solver = 'sparsa'           % :: default: sparsa, check docs for available options
+tolerance = 1e-8            % :: default: 1e-8
+lambda_a = -6               % :: default: -6
+lambda_b = -0.5             % :: default: -0.5
 
 % random forest
-n_trees = 500
-max_splits = 60
-n_predictor_samples = 50
+n_trees = 500               % :: default: 500
+max_splits = 60             % :: default: 60
+n_predictor_samples = 50    % :: default: 50
 
-%% File Options
+%% File
 % base file path for figure saving
-base_path = 'C:/Users/Bono/Documents/MATLAB'
+base_path = 'C:/Users/Bono/Documents/MATLAB' % please change to your workspace
 
 % can modify file name based on your params
-fname = sprintf('%s/%d-iter_%s-model_%.1f-dist_%.1f-corr.png', base_path, n_iteration, model, distance_cutoff, correlation_cutoff);
+fname = sprintf('%s/%s-model_%d-iter_%.1f-dist_%.1f-corr.png', base_path, model, n_iteration, distance_cutoff, correlation_cutoff);
 
-Preprocessing
+%% Preprocessing
 %%
 idxorig = find(sum(data<distance_cutoff,[1 3]));
 
@@ -152,14 +152,28 @@ end
 
 ipt = mean(iptglob);
 
-%% Draw figures
+%% Draw figures from loaded data
 figure('Position', [500 500 800 300]); hold on; box off;
 
-plot(35:329,ipt(:,1:295),'LineWidth',1.5);
+plot(35:329,ipt(:,1:295),'LineWidth',1.2);
 set(gca,'linewidth',2,'FontSize',18,'FontWeight','normal');
 xlim([35 329]); ylim([-0.1 1.1]);
 
-p = plot(35:329,ipt(:,296:590),'LineWidth',1.5,'LineStyle','--');
+ftitle = sprintf('%s %d-iter %.1f-dist %.1f-corr',model,  n_iteration, distance_cutoff, correlation_cutoff);
+title(ftitle, FontSize = 16)
+xlabel('residue', FontSize = 13)
+ylabel('importance', FontSize = 13)
+
+p = plot(35:329,ipt(:,296:590),'LineWidth',1.2);
 hold off;
+
+% setup peak comparison to known important residues
+% known_importance = [54, 144, 221, 252, 285];  % To compare with our value
+% text_values = num2str(text_positions.');
+% max_values = max(ipt(:, 1:295), ipt(:, 296:590));  % Find maximum values along each chain
+% text(known_importance, max_values(known_importance - 34) + .05, text_values, 'HorizontalAlignment', 'center');
+
+lgd = legend('chain-1','chain-2')
+lgd.FontSize = 12
 
 saveas(gca, fname, 'png')
