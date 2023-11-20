@@ -114,7 +114,7 @@ if model == 'rf'
     
     % train the model 10 times with randomly chosen features for statistics
     % for t = 1:10
-    for t = 1:2
+    for t = 1:n_iteration
         % randomly choose elements
         i = 1; idxrelat = [];
         while i <= size(relatmat,1)
@@ -177,3 +177,8 @@ lgd = legend('chain-1','chain-2')
 lgd.FontSize = 12
 
 saveas(gca, fname, 'png')
+
+%% Export importance data for comparison
+% custom name for variable we want to compare
+fvarName = sprintf('importance-%d-features', n_features);
+save(fvarName, 'ipt');
