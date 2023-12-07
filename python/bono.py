@@ -96,21 +96,23 @@ mean_trained_importance = np.mean(iptglobal, axis=0)
 
 # %%
 plt.figure(figsize=(8, 3))
-plt.plot(range(35, 330), mean_trained_importance[0, 0:295], linewidth=1.5)
+
+# Plot the first set of data (0:295) in blue with a solid line
+plt.plot(range(35, 330),
+         mean_trained_importance[0, 0:295], linewidth=1.5, label='0-295 idx', color='#429EBD')
+
+# Plot the second set of data (295:590) in red with a dashed line
+plt.plot(range(35, 330), mean_trained_importance[0, 295:590],
+         linewidth=1.5, label='295-590 idx', linestyle='--', color='#FFB347')
+
 plt.xlabel('Residue index')
 plt.ylabel('Importance')
 plt.xlim([35, 329])
 plt.ylim([0, 1.1])
-plt.savefig('0-295.png')
+
+plt.legend()
+plt.savefig('combined_GC-Swap.png')
 plt.show()
-# %%
-plt.figure(figsize=(8, 3))
-plt.plot(range(35, 330), mean_trained_importance[0, 295:590], linewidth=1.5)
-plt.xlabel('Residue index')
-plt.ylabel('Importance')
-plt.xlim([35, 329])
-plt.ylim([0, 1.1])
-plt.savefig('295-590.png')
-plt.show()
+
 
 # %%

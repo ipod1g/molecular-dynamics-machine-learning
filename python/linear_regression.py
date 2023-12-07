@@ -1,131 +1,147 @@
 # %%
+# Import packages
 from __future__ import absolute_import, division, print_function
-
+import random
 import numpy as np
+from demystifying import feature_extraction as fe
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import normalize
+import logging
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.model_selection import train_test_split
 
 # %%
-group = ['GC', 'Swap']
-groupn = ["Natural G/C", "-1/+1-swap"]
+# Define constants and cast empty array
+logger = logging.getLogger("demo")
+logger.setLevel('INFO')
 
+group = ['GC', 'Swap']  # equivalent of labels
+groupn = ["Natural G/C", "-1/+1-swap"]  # additional description for above
+
+# Found from the size of mindisres data
 N = 1204
-# M = 10620
-M = 2000  # reduce columns to lessen strain when testing
-data = np.zeros((N, M, 2))
+M = 10620
 
+data = np.zeros((N, M, len(group)))
+
+# %%
+# Read data files
 for k in range(2):
     file_path = 'mindisres-' + group[k] + '.xvg'
     data[:, :, k] = np.loadtxt(
         file_path, skiprows=24, usecols=range(1, M+1))
 
-
-data = data * 10
-
-# Preprocessing
 # %%
-cutoff = 5
-idxorig = np.where(np.sum(data < cutoff, axis=(0, 2)))
-
+# Setup for preprocess
+data = data * 10
 datamerge = np.concatenate([data[:, :, 0], data[:, :, 1]], axis=0)
-
 dataNorm = normalize(1.0 / datamerge)
 R = np.corrcoef(dataNorm.T)
 relatmat = np.triu(R, k=1)
+cutoff = 5  # remove residue candidates with heavy-atom min distance > 5Å
+idxorig = np.where(np.sum(data < cutoff, axis=(0, 2)))
 
 # %%
-# Logistic regression
-iptglob = []
+# Shuffling
+# can loop for training set counts
+training_iteration = 1
+iptglobal = []
 
-trainRepeat = 2
-
-# Train the model 10 times with randomly chosen features for statistics
-for t in range(trainRepeat):
-    idxrelat = set()
+for t in range(training_iteration):
     i = 1
-    while i < relatmat.shape[0]:
+    idxrelat = []
+    while i <= len(relatmat):
         if i in idxrelat:
             i += 1
             continue
-        tmp = [i] + list(np.where(np.abs(relatmat[i, :]) > 0.9)[0])
-        idxrelat.update(np.random.choice(
-            np.array(tmp).flatten(), size=len(tmp) - 1, replace=False))
-        # idxrelat.update(np.random.choice(
-        #     tmp, size=len(tmp) - 1, replace=False))
+        tmp = [i] + \
+            [j for j, val in enumerate(relatmat[i-1]) if abs(val) > 0.9]
+        idxrelat = idxrelat + random.sample(tmp, len(tmp) - 1)
         i += 1
 
-    idx = np.setdiff1d(idxorig, list(idxrelat))
-    datamerge = np.concatenate([data[:, idx, 0], data[:, idx, 1]])
+    idx = np.setdiff1d(idxorig, idxrelat)
+    datamerge2 = np.concatenate((data[:, idx, 0], data[:, idx, 1]), axis=0)
 
-    X = normalize(1. / datamerge)
-    Y = np.concatenate(
-        (np.ones((data.shape[0], 1)), np.zeros((data.shape[0], 1))))
+    X = normalize(1.0/datamerge2)  # X
 
-    test_size = 0.4
-    Y_size = Y.shape[0]
+    # labels = np.zeros((2 * N, 2))  # Y
+    # labels[:N, 0] = 1
+    # labels[N:, 1] = 1
+    Y = np.concatenate([
+        np.ones((data.shape[0], 1)),
+        np.zeros((data.shape[0], 1))
+    ])
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        X, Y, test_size=test_size, random_state=42)
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        X, Y, test_size=0.4, random_state=42)
 
-    x_train = x_train.astype(int)
-    x_test = x_test.astype(int)
-    y_train = y_train.astype(int)
-    y_test = y_test.astype(int)
+    # Define a list of lambda values for regularization
+    lambda_values = np.logspace(-6, -0.5, len(idx))
 
-    X = X.T
-    lambda_vals = np.logspace(-6, -0.5, len(idx))
+    # Initialize a logistic regression model with L1 (Lasso) regularization
+    model = LogisticRegressionCV(
+        Cs=1 / lambda_values,
+        cv=len(lambda_values),
+        penalty='l1',
+        solver='saga',
+        max_iter=5000,
+        # max_iter=10000,
+        tol=1e-8,
+        scoring='neg_log_loss',  # To match MATLAB's logarithmic loss
+        random_state=42  # For reproducibility
+    )
 
-    Mdl = LogisticRegression(penalty='l1', solver='saga',
-                             C=1.0 / lambda_vals[0], max_iter=1000, tol=1e-8)
+    # Fit the logistic regression model with different lambda values
 
-    Mdl.fit(x_train, y_train)
-    # needs to be datamerge columns but its 1 now,,,
-    labels = Mdl.predict(x_test)
-    L = Mdl.score(x_test, y_test)
+    # Convert one-hot encoded Y_train to 1D if necessary
+    if Y_train.ndim > 1 and Y_train.shape[1] > 1:
+        Y_train = np.argmax(Y_train, axis=1)
 
-    # Mdl.fit(X[idxTrain, :], Y[idxTrain])
-    # labels = Mdl.predict(X[idxTest, :])
-    # L = Mdl.score(X[:, idxTest], Y[idxTest])
+    # Train the model on the training data
+    model.fit(X_train, Y_train)
 
-    importance = np.zeros((1, data.shape[1]))
-    # importance[idx] = np.abs(Mdl.coef_[:,1])
-    importance[0, idx] = np.abs(Mdl.coef_[0])
-    reshaped_importance = np.reshape(
-        importance, (590, int(data.shape[1] / 590)))
-    normalized_importance = normalize(reshaped_importance, norm='l2', axis=0)
-    iptorig = np.nansum(normalized_importance, axis=1)
-    ipt = normalize(iptorig)
+    labels = model.predict(X_test)
 
-    iptglob[t, :] = ipt
+    importance_populated = np.zeros(data.shape[1])  # 10620
+    importance_populated[idx] = np.abs(model.coef_)
 
-    # reference
-    # importance = np.zeros(data.shape[1])
-    # importance[idx] = np.abs(Mdl.coef_[:,1])
-    # importance = np.reshape(590, (-1, 1))
-    # importance = normalize(importance, norm='l2', axis=0)
-    # iptorig = np.nansum(importance, axis=1)
-    # ipt = normalize(iptorig.reshape(-1, 1), axis=0, norm='max')
-    # iptglob[t, :] = ipt
+    importance_reshaped = np.reshape(
+        importance_populated, (590, int(np.size(data, 1) / 590)))
+
+    importance_normalized = normalize(
+        importance_reshaped, norm='l2', axis=1)
+    importance_transposed = importance_normalized.T
+    iptorig = np.nansum(importance_transposed, axis=0)
+    iptorig = iptorig.reshape(1, -1)
+    ipt = normalize(iptorig, norm='max')
+    # Append ipt to iptglob
+    iptglobal.append(ipt)
+
 
 # %%
-ipt = np.mean(iptglob, axis=0)
+# Get mean importance from all training sets
+iptglobal = np.array(iptglobal)
+mean_trained_importance = np.mean(iptglobal, axis=0)
 
+# %%
 plt.figure(figsize=(8, 3))
-plt.plot(range(35, 330), ipt[:295], linewidth=1.5)
+
+# Plot the first set of data (0:295) in blue with a solid line
+plt.plot(range(35, 330),
+         mean_trained_importance[0, 0:295], linewidth=1.5, label='0-295 idx', color='#429EBD')
+
+# Plot the second set of data (295:590) in red with a dashed line
+plt.plot(range(35, 330), mean_trained_importance[0, 295:590],
+         linewidth=1.5, label='295-590 idx', linestyle='--', color='#FFB347')
+
 plt.xlabel('Residue index')
 plt.ylabel('Importance')
 plt.xlim([35, 329])
-plt.ylim([-0.1, 1.1])
+plt.ylim([0, 1.1])
+
+plt.legend()
+plt.savefig('combined_GC-Swap.png')
 plt.show()
 
-plt.figure(figsize=(8, 3))
-plt.plot(range(35, 330), ipt[295:590], linewidth=1.5)
-plt.xlabel('Residue index')
-plt.ylabel('Importance')
-plt.xlim([35, 329])
-plt.ylim([-0.1, 1.1])
-plt.show()
 
 # %%
